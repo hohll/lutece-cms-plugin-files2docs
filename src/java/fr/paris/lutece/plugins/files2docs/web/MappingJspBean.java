@@ -126,6 +126,7 @@ public class MappingJspBean extends MVCAdminJspBean
     // Messages
     private static final String MESSAGE_MAPPING_NOT_FOUND = "files2docs.message.mappingNotFound";
     private static final String MESSAGE_ERROR_FILES2DOCS = "files2docs.message.error.files2docs";
+    private static final String MESSAGE_ERROR_MAPPING_ALREADY_EXISTS = "files2docs.message.error.mappingAlreadyExists";
     private static final String MESSAGE_ERROR_DOC_TYPE_HAS_MANDATORY_DOC_ATTR_FILE_IMG = "files2docs.message.error.docType.hasMandatoryDocAttrFileImg";
     private static final String MESSAGE_CONFIRM_REMOVE_MAPPING = "files2docs.message.confirmRemoveMapping";
     private static final String MESSAGE_CONFIRM_CHANGE_ATTRIBUTE_FILE_IMAGE = "files2docs.message.confirmChangeAttributeFileImage";
@@ -202,8 +203,12 @@ public class MappingJspBean extends MVCAdminJspBean
             return redirect( request, AdminMessageService.getMessageUrl( request, Messages.MANDATORY_FIELDS, AdminMessage.TYPE_STOP ) );
         }
 
-        if ( MappingHome.findByDocumentTypeCode( strDocumentTypeCode, getPlugin( ) ) != null
-                || Files2DocsLinkDocument.getInstance( ).getDocumentTypeByCode( strDocumentTypeCode ) == null )
+        if ( MappingHome.findByDocumentTypeCode( strDocumentTypeCode, getPlugin( ) ) != null )
+        {
+            return redirect( request, AdminMessageService.getMessageUrl( request, MESSAGE_ERROR_MAPPING_ALREADY_EXISTS, AdminMessage.TYPE_STOP ) );
+        }
+
+        if ( Files2DocsLinkDocument.getInstance( ).getDocumentTypeByCode( strDocumentTypeCode ) == null )
         {
             return redirect( request, AdminMessageService.getMessageUrl( request, MESSAGE_ERROR_FILES2DOCS, AdminMessage.TYPE_STOP ) );
         }
