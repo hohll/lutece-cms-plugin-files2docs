@@ -132,6 +132,7 @@ public class Files2DocsJspBean extends MVCAdminJspBean
     private static final String VIEW_SELECT_FILES = "selectFiles";
     private static final String ACTION_SELECT_FILES = "selectFiles";
     private static final String VIEW_CREATE_DOCUMENTS = "createDocuments";
+    private static final String VIEW_UPLOADED_FILE = "uploadedFile";
     private static final String ACTION_CREATE_DOCUMENTS = "createDocuments";
     private static final String VIEW_IMPORT_RESULT = "importResult";
 
@@ -165,6 +166,7 @@ public class Files2DocsJspBean extends MVCAdminJspBean
     private static final String MARK_MAX_FILES = "max_files";
     private static final String MARK_UPLOADED_FILES = "uploaded_files";
     private static final String MARK_UPLOAD_FIELD = "upload_field";
+    private static final String MARK_PREVIEW_LIST = "preview_list";
     private static final String FIELD_UPLOAD = "files2docs_files";
 
     // Parameters
@@ -178,6 +180,8 @@ public class Files2DocsJspBean extends MVCAdminJspBean
     private static final String PARAMETER_CANCEL = "cancel";
     private static final String PARAMETER_DOCUMENT_TITLE = "document_title";
     private static final String PARAMETER_DOCUMENT_SUMMARY = "document_summary";
+    private static final String PARAMETER_DOCUMENT_REMOVED = "document_removed";
+    private static final String PARAMETER_FILE = "file";
     private static final String PARAMETER_IMPORTED_LIST = "imported_list";
     private static final String PARAMETER_FAILURE_LIST = "failure_list";
     private static final String PARAMETER_MAPPING = "mapping";
@@ -225,6 +229,8 @@ public class Files2DocsJspBean extends MVCAdminJspBean
     private static final String STRING_EMPTY = "";
     private static final String STRING_COMMA = ",";
     private static final String STRING_DOT = ".";
+    private static final Map<String, String> PREVIEW_CONTENT_TYPES = Map.of( "png", "image/png", "jpg", "image/jpeg", "jpeg", "image/jpeg", "gif",
+            "image/gif", "webp", "image/webp" );
     private static final String STRING_UNDERSCORE = "_";
     private static final String STRING_NULL = "null";
     private static final String STRING_DEGRADED = "degraded";
@@ -506,6 +512,7 @@ public class Files2DocsJspBean extends MVCAdminJspBean
         model.put( MARK_EXTENSION_CHECKED_LIST, StringUtils.defaultString( getExtensionList( request ) ) );
         model.put( MARK_MAPPING_LIST, colMappings );
         model.put( MARK_FILENAME_LIST, listFilenames );
+        model.put( MARK_PREVIEW_LIST, listFilenames.stream( ).map( strFilename -> getPreviewContentType( strFilename ) != null ).toList( ) );
         model.put( MARK_ATTRIBUTES_FORMS, HtmlMarkup.ofAll( getAttributesForms( request, strDocumentTypeCode, listFilenames ) ) );
         model.put( MARK_UPLOAD_MODE, StringUtils.defaultString( request.getParameter( PARAMETER_UPLOAD_MODE ) ) );
 
@@ -515,6 +522,50 @@ public class Files2DocsJspBean extends MVCAdminJspBean
         }
 
         return getPage( PROPERTY_CREATE_DOCUMENTS_PAGE_TITLE, TEMPLATE_CREATE_DOCUMENTS, model );
+    }
+
+    /**
+     * Sends an uploaded image of the current import, to preview it on the documents creation page. Only the image types of
+     * PREVIEW_CONTENT_TYPES are sent, with that content type, so that no uploaded file is ever served as active content.
+     *
+     * @param request
+     *            The HTTP request, with the rank of the file (from 1, in the order of the creation page)
+     * @return null, the image being written in the response, or the STOP message when the file is not a previewable image of the import
+     */
+    @View( VIEW_UPLOADED_FILE )
+    public String getUploadedFile( HttpServletRequest request )
+    {
+        List<String> listFilenames = getListFilename( request );
+        int nRank = Files2DocsUtil.convertStringToInt( request.getParameter( PARAMETER_FILE ) );
+
+        if ( nRank < 1 || nRank > listFilenames.size( ) )
+        {
+            return redirect( request, AdminMessageService.getMessageUrl( request, MESSAGE_ZERO_FILE_IMPORTED, AdminMessage.TYPE_STOP ) );
+        }
+
+        String strFilename = listFilenames.get( nRank - 1 );
+        String strContentType = getPreviewContentType( strFilename );
+
+        if ( strContentType == null )
+        {
+            return redirect( request, AdminMessageService.getMessageUrl( request, MESSAGE_ZERO_FILE_IMPORTED, AdminMessage.TYPE_STOP ) );
+        }
+
+        download( readFile( new File( getUploadDirectory( request ), strFilename ) ), strFilename, strContentType );
+
+        return null;
+    }
+
+    /**
+     * Gives the content type under which an uploaded file can be previewed
+     *
+     * @param strFilename
+     *            The file name
+     * @return The image content type, or null when the file is not a previewable image
+     */
+    private static String getPreviewContentType( String strFilename )
+    {
+        return PREVIEW_CONTENT_TYPES.get( StringUtils.lowerCase( StringUtils.substringAfterLast( strFilename, STRING_DOT ) ) );
     }
 
     /**
@@ -552,10 +603,18 @@ public class Files2DocsJspBean extends MVCAdminJspBean
         }
 
         List<String> listFilenames = getListFilename( request );
+        List<String> listKeptFilenames = new ArrayList<>( );
         List<Document> listDocuments = new ArrayList<>( );
 
         for ( int identifier = 0; identifier < listFilenames.size( ); identifier++ )
         {
+            if ( request.getParameter( PARAMETER_DOCUMENT_REMOVED + STRING_UNDERSCORE + ( identifier + 1 ) ) != null )
+            {
+                new File( getUploadDirectory( request ), listFilenames.get( identifier ) ).delete( );
+
+                continue;
+            }
+
             Document document = new Document( );
             document.setCodeDocumentType( strDocumentTypeCode );
             document.setSpaceId( nSpaceId );
@@ -608,11 +667,17 @@ public class Files2DocsJspBean extends MVCAdminJspBean
 
             document.setAttributes( listAttributes );
             listDocuments.add( document );
+            listKeptFilenames.add( listFilenames.get( identifier ) );
+        }
+
+        if ( listDocuments.isEmpty( ) )
+        {
+            return redirect( request, AdminMessageService.getMessageUrl( request, MESSAGE_ZERO_FILE_IMPORTED, AdminMessage.TYPE_STOP ) );
         }
 
         List<String> listImported = new ArrayList<>( );
         List<String> listFailure = new ArrayList<>( );
-        Iterator<String> filenameIterator = listFilenames.iterator( );
+        Iterator<String> filenameIterator = listKeptFilenames.iterator( );
 
         for ( Document document : listDocuments )
         {
