@@ -57,6 +57,7 @@ import fr.paris.lutece.plugins.document.service.DocumentException;
 import fr.paris.lutece.plugins.document.service.DocumentService;
 import fr.paris.lutece.plugins.document.service.DocumentTypeResourceIdService;
 import fr.paris.lutece.plugins.document.service.spaces.DocumentSpacesService;
+import fr.paris.lutece.plugins.document.service.spaces.SpaceNode;
 import fr.paris.lutece.plugins.files2docs.business.Attribute;
 import fr.paris.lutece.plugins.files2docs.business.AttributeHome;
 import fr.paris.lutece.plugins.files2docs.business.Mapping;
@@ -176,6 +177,18 @@ public class Files2DocsLinkDocument
     public String getSpacesBrowser( HttpServletRequest request, AdminUser user, Locale locale, String strActionUrl )
     {
         return _documentSpacesService.getSpacesBrowser( request, user, locale, true, true, false, null, strActionUrl );
+    }
+
+    /**
+     * Gets the tree of the document spaces the user can see, from its roots
+     * 
+     * @param user
+     *            The current user
+     * @return The root nodes of the spaces tree
+     */
+    public List<SpaceNode> getSpacesTree( AdminUser user )
+    {
+        return _documentSpacesService.getSpacesTreeRoots( user );
     }
 
     /**

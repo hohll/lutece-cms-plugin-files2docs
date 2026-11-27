@@ -140,6 +140,7 @@ public class Files2DocsJspBean extends MVCAdminJspBean
     private static final String MARK_DOCUMENT_TYPE_CODE_DISABLED = "document_type_code_disabled";
     private static final String MARK_DOCUMENT_TYPE_LIST = "document_type_list";
     private static final String MARK_SPACES_BROWSER = "spaces_browser";
+    private static final String MARK_SPACES_TREE = "spaces_tree";
     private static final String MARK_SUBMIT_BUTTON_DISABLED = "submit_button_disabled";
     private static final String MARK_NB_IMPORTED_FILES = "nb_imported_files";
     private static final String MARK_NB_FAILURE_FILES = "nb_failure_files";
@@ -227,7 +228,6 @@ public class Files2DocsJspBean extends MVCAdminJspBean
     private static final String STRING_UNDERSCORE = "_";
     private static final String STRING_NULL = "null";
     private static final String STRING_DEGRADED = "degraded";
-    private static final String DEFAULT_SPACE_ID = "0";
 
     // Returns (upload)
     private static final String RETURN_IS_NULL = "isNull";
@@ -311,11 +311,6 @@ public class Files2DocsJspBean extends MVCAdminJspBean
             strSpaceId = request.getParameter( PARAMETER_BROWSER_SPACE_ID );
         }
 
-        if ( strSpaceId == null )
-        {
-            strSpaceId = DEFAULT_SPACE_ID;
-        }
-
         int nImportedFiles = Files2DocsUtil.convertStringToInt( request.getParameter( PARAMETER_NB_IMPORTED_FILES ) );
         Collection<DocumentType> colDocumentType = _linkDocument.getListDocumentTypeFile( Files2DocsUtil.getListAttributeTypeFile( ),
                 false );
@@ -324,8 +319,6 @@ public class Files2DocsJspBean extends MVCAdminJspBean
         model.put( MARK_DOCUMENT_TYPE_CODE, strDocumentTypeCode );
         model.put( MARK_DOCUMENT_TYPE_CODE_DISABLED, nImportedFiles > 0 );
         model.put( MARK_DOCUMENT_TYPE_LIST, colDocumentType );
-        model.put( MARK_SPACES_BROWSER, HtmlMarkup.of( _linkDocument.getSpacesBrowser( request, getUser( ), getLocale( ),
-                getViewFullUrl( VIEW_SELECT_FILES ) ) ) );
         model.put( MARK_SUBMIT_BUTTON_DISABLED, StringUtils.isEmpty( strSpaceId ) || strSpaceId.equals( STRING_NULL ) );
         model.put( MARK_BROWSER_SELECTED_SPACE_ID, strSpaceId );
         model.put( MARK_NB_IMPORTED_FILES, nImportedFiles );
@@ -342,7 +335,19 @@ public class Files2DocsJspBean extends MVCAdminJspBean
             model.put( MARK_NO_HEADER, Boolean.TRUE.toString( ) );
         }
 
-        String strTemplate = STRING_DEGRADED.equals( request.getParameter( PARAMETER_UPLOAD_MODE ) ) ? TEMPLATE_DEGRADED_MODE : TEMPLATE_SELECT_FILES;
+        String strTemplate;
+
+        if ( STRING_DEGRADED.equals( request.getParameter( PARAMETER_UPLOAD_MODE ) ) )
+        {
+            strTemplate = TEMPLATE_DEGRADED_MODE;
+            model.put( MARK_SPACES_BROWSER, HtmlMarkup.of( _linkDocument.getSpacesBrowser( request, getUser( ), getLocale( ),
+                    getViewFullUrl( VIEW_SELECT_FILES ) ) ) );
+        }
+        else
+        {
+            strTemplate = TEMPLATE_SELECT_FILES;
+            model.put( MARK_SPACES_TREE, _linkDocument.getSpacesTree( getUser( ) ) );
+        }
 
         return getPage( PROPERTY_SELECT_FILES_PAGE_TITLE, strTemplate, model );
     }
