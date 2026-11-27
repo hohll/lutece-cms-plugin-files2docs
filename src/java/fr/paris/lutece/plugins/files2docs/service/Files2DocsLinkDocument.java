@@ -38,7 +38,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 
+import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.spi.CDI;
+import jakarta.inject.Inject;
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.lang3.StringUtils;
@@ -67,33 +69,29 @@ import fr.paris.lutece.portal.service.plugin.PluginService;
 /**
  * Link class with document services
  */
-public final class Files2DocsLinkDocument
+@ApplicationScoped
+public class Files2DocsLinkDocument
 {
     // Attributes
     private static final String ATTRIBUTE_FILE = "file";
     private static final String ATTRIBUTE_IMAGE = "image";
-    private static Files2DocsLinkDocument _singleton;
+
+    @Inject
+    private DocumentService _documentService;
+
+    @Inject
+    private DocumentSpacesService _documentSpacesService;
 
     /**
-     * Creates a new instance of Files2DocsLinkDocument
-     */
-    private Files2DocsLinkDocument( )
-    {
-    }
-
-    /**
-     * Gets the unique instance of Files2DocsLinkDocument
+     * Gets the Files2DocsLinkDocument bean
      * 
-     * @return The unique instance of Files2DocsLinkDocument
+     * @return The Files2DocsLinkDocument bean
+     * @deprecated Inject {@link Files2DocsLinkDocument} in a CDI bean instead
      */
+    @Deprecated( forRemoval = true )
     public static Files2DocsLinkDocument getInstance( )
     {
-        if ( _singleton == null )
-        {
-            _singleton = new Files2DocsLinkDocument( );
-        }
-
-        return _singleton;
+        return CDI.current( ).select( Files2DocsLinkDocument.class ).get( );
     }
 
     /**
@@ -177,7 +175,7 @@ public final class Files2DocsLinkDocument
      */
     public String getSpacesBrowser( HttpServletRequest request, AdminUser user, Locale locale, String strActionUrl )
     {
-        return CDI.current( ).select( DocumentSpacesService.class ).get( ).getSpacesBrowser( request, user, locale, true, true, false, null, strActionUrl );
+        return _documentSpacesService.getSpacesBrowser( request, user, locale, true, true, false, null, strActionUrl );
     }
 
     /**
@@ -194,7 +192,7 @@ public final class Files2DocsLinkDocument
      */
     public boolean isAuthorizedAdminDocument( int nIdSpace, String strDocumentTypeId, AdminUser user )
     {
-        return CDI.current( ).select( DocumentService.class ).get( ).isAuthorizedAdminDocument( nIdSpace, strDocumentTypeId, DocumentTypeResourceIdService.PERMISSION_CREATE, user );
+        return _documentService.isAuthorizedAdminDocument( nIdSpace, strDocumentTypeId, DocumentTypeResourceIdService.PERMISSION_CREATE, user );
     }
 
     /**
@@ -303,7 +301,7 @@ public final class Files2DocsLinkDocument
     {
         try
         {
-            CDI.current( ).select( DocumentService.class ).get( ).createDocument( document, user );
+            _documentService.createDocument( document, user );
         }
         catch( DocumentException e )
         {
